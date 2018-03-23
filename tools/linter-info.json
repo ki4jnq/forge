@@ -1,0 +1,18 @@
+{
+  "DisableAll": true,
+  "Enable": [
+    "gotype",
+    "deadcode",
+    "golint",
+    "varcheck",
+    "structcheck",
+    "errcheck",
+    "dupl",
+    "ineffassign",
+    "interfacer",
+    "unconvert",
+    "goconst",
+    "gosimple",
+    "staticcheck"
+  ]
+}

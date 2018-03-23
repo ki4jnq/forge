@@ -1,0 +1,7 @@
+package: github.com/ki4jnq/forge
+import:
+- package: gopkg.in/yaml.v2
+- package: k8s.io/client-go
+  version: v2.0.0
+- package: k8s.io/apimachinery
+  version: 2de00c78cb6d6127fb51b9531c1b3def1cbcac8c

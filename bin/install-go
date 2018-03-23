@@ -1,0 +1,30 @@
+set -e
+
+targetVersion="1.8"
+
+archive="go$targetVersion.tar.gz"
+remoteArchive="https://storage.googleapis.com/golang/go$targetVersion.linux-amd64.tar.gz"
+installPath="/usr/local/go$targetVersion"
+sym="/usr/local/go"
+sysgo="/usr/local/gosys"
+
+if [[ ! -d $installPath ]]; then
+  echo "Downloading Go-$targetVersion"
+  curl "$remoteArchive" > $archive
+  sudo mkdir $installPath
+  sudo tar xfz $archive -C $installPath --strip 1
+fi
+
+if [[ -L $sym ]]; then
+  # Remove the sym link if it already exists. We'll relink it just to be sure.
+  sudo rm $sym
+fi
+
+if [[ -d $sym ]]; then
+  echo "Moving the system Go to $sysgo"
+  sudo mv $sym $sysgo
+fi
+
+sudo ln -s $installPath $sym
+
+echo "Go $targetVerion should now be the installed go. Run 'go version' to check."

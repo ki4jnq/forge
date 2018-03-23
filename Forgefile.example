@@ -1,0 +1,88 @@
+# Configuration is broken out by app environment, so you can safely commit
+# this file to source control.
+{{ $dbuser := env "DB_USER" }}
+{{ $dbpass := env "DB_PASS" }}
+{{ $dbhost := env "DB_HOST" }}
+{{ $dbport := env "DB_PORT" }}
+{{ $dbname := env "DB_NAME" }}
+
+development:
+  db:
+    host: localhost
+    user: "{{ $dbuser }}"
+    # Env Vars can be interpolated into the config file using curly braces and
+    # the `env` helper method. Syntax for templating follows Go's
+    # "text/template" rules.
+    pass: "{{ $dbpass }}"
+
+  version:
+    format: "v%d.%d.%d" # Defaults "%d.%d.%d"
+    file: APP_VERSION # Defaults to "VERSION"
+
+  run:
+    env:
+      # Use this block to specify ENV vars to set when executing commands via
+      # `forge run ...`
+      APP_HOST: localhost
+      DB_HOST: localhost
+
+    args:
+      # This section is still in the works, but it will be used to specify
+      # default args for commands run via `forge run ...`.
+      _common: &common
+        # Look for the APP_PORT env, but default to port 1092.
+        - "--port {{env `APP_PORT` | def `1092`}}"
+        - "--release-stage {{env `RELEASE_STAGE`}}"
+        - "--raygun-api-key getfromraygun"
+        - "--db-host 127.0.0.1"
+        - "--db-user {{ $dbuser }}"
+        - "--db-pass {{ $dbpass }}"
+        - "--db-port 5432"
+        - "--db-name loginqa"
+
+      "go test":
+        <<: *common
+
+      psql:
+        - "--host={{ $dbhost }}"
+        - "--dbname={{ $dbname }}"
+        - "--username={{ $dbuser }}"
+
+#### Deployment ####
+
+qa:
+  deploy:
+    client:
+      shipper: gulp-s3
+      opts: { bucket: "frontend.qa.myproject.io" }
+    service:
+      shipper: k8
+      opts:
+        cluster: my-qa-cluster
+        service: {{env "GCLOUD_SERVICE_JSON"}}
+    docs:
+      shipper: swagger-s3
+      opts: { file: "tools/swagger/app-swagger.yaml" }
+    db:
+      shipper: ssh
+      opts:
+        host: {{env "SSH_HOST"}}
+        steps:
+          - ./db/bin/setup -d app_qa
+          - ./db/bin/seed -d app_qa
+
+production:
+  deploy:
+    client:
+      shipper: s3-copy
+      opts: { from: "frontend.qa.myproject.io", to: "frontend.myproject.io" }
+    service:
+      shipper: k8
+      opts:
+        cluster: "cluster-name"
+        service: {{env "GCLOUD_SERVICE_JSON"}}
+    db:
+      shipper: ssh
+      opts:
+        host: {{env "SSH_HOST"}}
+        steps: ["./db/bin/migrate -d app_prod"]

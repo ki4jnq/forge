@@ -1,0 +1,9 @@
+{
+  "Cyclo": 20,
+  "DisableAll": true,
+  "Enable": [
+    "gocyclo",
+    "vet",
+    "safesql"
+  ]
+}

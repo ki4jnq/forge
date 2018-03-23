@@ -1,0 +1,24 @@
+#! /usr/bin/env bash
+set -e
+
+os=$(uname -s)
+rawArch=$(uname -m)
+
+baseUrl="https://forge-dist.s3.amazonaws.com"
+
+case $rawArch in
+x86_64)
+  arch=amd64
+  ;;
+amd64)
+  arch=amd64
+  ;;
+*)
+  echo "Unrecognized architecture $rawArch"
+  exit 1
+esac
+
+curl "$baseUrl/$os/$arch/forge" > forge
+
+chmod ug+x forge
+sudo mv forge /usr/local/bin
