@@ -26,7 +26,7 @@ release: Darwin Linux
 
 clean:
 	rm -r ./build/*
-	if [[ -e $(INSTALLFULLPATH) ]]; rm $(INSTALLFULLPATH); fi
+	if [[ -e $(INSTALLFULLPATH) ]]; then rm $(INSTALLFULLPATH); fi
 	if [[ -e ./forge ]]; then rm ./forge; fi
 
 mrproper: clean
