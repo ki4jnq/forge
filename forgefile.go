@@ -17,6 +17,10 @@ func NewParser(env string) *Unformatter {
 		unformatter.Staging = envUnformatter
 	case "production":
 		unformatter.Production = envUnformatter
+	case "test":
+		unformatter.Test = envUnformatter
+	case "uat":
+		unformatter.Uat = envUnformatter
 	case "development":
 		fallthrough
 	default:
@@ -30,8 +34,10 @@ func NewParser(env string) *Unformatter {
 type Unformatter struct {
 	All         EnvUnformatter
 	Development EnvUnformatter
+	Test        EnvUnformatter
 	Qa          EnvUnformatter
 	Staging     EnvUnformatter
+	Uat         EnvUnformatter
 	Production  EnvUnformatter
 }
 
