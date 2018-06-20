@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/ki4jnq/forge"
+	_ "github.com/ki4jnq/forge/db"
 	_ "github.com/ki4jnq/forge/deploy"
-	_ "github.com/ki4jnq/forge/migrate"
 	_ "github.com/ki4jnq/forge/run"
 	_ "github.com/ki4jnq/forge/version"
 )
