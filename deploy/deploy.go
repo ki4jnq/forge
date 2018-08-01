@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ki4jnq/forge"
+	"github.com/ki4jnq/forge/config"
 	"github.com/ki4jnq/forge/deploy/shippers"
 )
 
@@ -26,7 +26,7 @@ func init() {
 		"The AppEngine Docker image tag to deploy",
 	)
 
-	forge.Register(&forge.Cmd{
+	config.Register(&config.Cmd{
 		Name:      "deploy",
 		Flags:     flags,
 		SubConf:   conf,

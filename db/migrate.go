@@ -5,7 +5,7 @@ import (
 	"flag"
 	"io"
 
-	"github.com/ki4jnq/forge"
+	"github.com/ki4jnq/forge/config"
 	"github.com/ki4jnq/forge/lib/db"
 	"github.com/ki4jnq/forge/migration"
 )
@@ -42,7 +42,7 @@ func init() {
 	flags.StringVar(&conf.Target, "to", "", "The target version to migrate/rollback to.")
 	flags.StringVar(&conf.SSLMode, "ssl", "disable", "The SSL Postgres argument")
 
-	forge.Register(&forge.Cmd{
+	config.Register(&config.Cmd{
 		Name:      "db",
 		Flags:     flags,
 		SubConf:   conf,

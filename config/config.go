@@ -1,4 +1,4 @@
-package forge
+package config
 
 type Config struct {
 	Env string

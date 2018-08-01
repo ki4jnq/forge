@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ki4jnq/forge"
+	"github.com/ki4jnq/forge/config"
 	_ "github.com/ki4jnq/forge/db"
 	_ "github.com/ki4jnq/forge/deploy"
 	_ "github.com/ki4jnq/forge/run"
@@ -41,7 +41,7 @@ func main() {
 	}
 	cmdName := os.Args[1]
 
-	cmd, err := forge.CmdForName(cmdName)
+	cmd, err := config.CmdForName(cmdName)
 	if err != nil {
 		panic(err)
 	}
