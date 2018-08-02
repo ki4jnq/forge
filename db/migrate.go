@@ -8,6 +8,7 @@ import (
 	"github.com/ki4jnq/forge/config"
 	"github.com/ki4jnq/forge/lib/db"
 	"github.com/ki4jnq/forge/migration"
+	"github.com/ki4jnq/rconf"
 )
 
 var (
@@ -46,8 +47,18 @@ func init() {
 		Name:      "db",
 		Flags:     flags,
 		SubConf:   conf,
+		RubyConf:  rubyConf,
 		SubRunner: run,
 	})
+}
+
+func rubyConf(b rconf.Binder) {
+	b.BindString("username", &conf.DBUser)
+	b.BindString("password", &conf.DBPass)
+	b.BindString("host", &conf.DBHost)
+	b.BindString("port", &conf.DBPort)
+	b.BindString("database", &conf.DBName)
+	b.BindString("ssl", &conf.SSLMode)
 }
 
 func migrateOrRollback() error {
