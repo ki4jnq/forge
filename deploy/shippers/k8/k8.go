@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-
 	"io/ioutil"
+	"strings"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"

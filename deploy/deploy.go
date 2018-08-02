@@ -19,17 +19,11 @@ var (
 )
 
 func init() {
-	flags.StringVar(
-		&args.AppEngine.ImageTag,
-		"ae-image-tag",
-		"",
-		"The AppEngine Docker image tag to deploy",
-	)
-
 	config.Register(&config.Cmd{
 		Name:      "deploy",
 		Flags:     flags,
 		SubConf:   conf,
+		RubyConf:  rubyConf,
 		SubRunner: run,
 	})
 }
