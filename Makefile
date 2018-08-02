@@ -21,9 +21,6 @@ cp:
 install:
 	cp $(NTVBIN) $(INSTALLFULLPATH)
 
-release: Darwin Linux
-	aws s3 sync build/ s3://forge-dist
-
 clean:
 	rm -r ./build/*
 	if [[ -e $(INSTALLFULLPATH) ]]; then rm $(INSTALLFULLPATH); fi
