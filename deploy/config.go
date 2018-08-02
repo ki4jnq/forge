@@ -43,6 +43,22 @@ func rubyConf(b rconf.Binder) {
 func (sb *shipperBlock) defineOpts(b rconf.Binder) {
 	switch sb.ShipperName {
 	case "k8":
+		b.BindMapAttr("ca_file", sb.Opts, "caFile")
+		b.BindMapAttr("ca", sb.Opts, "ca")
+		b.BindMapAttr("server", sb.Opts, "server")
+		b.BindMapAttr("name", sb.Opts, "name")
+		b.BindMapAttr("image", sb.Opts, "image")
+
+		b.BindMapAttr("username", sb.Opts, "username")
+		b.BindMapAttr("password", sb.Opts, "password")
+
+		b.BindMapAttr("token", sb.Opts, "token")
+
+		b.BindMapAttr("api_key", sb.Opts, "apiKey")
+		b.BindMapAttr("api_cert", sb.Opts, "apiCert")
+
+		b.BindMapAttr("api_key_file", sb.Opts, "apiKeyFile")
+		b.BindMapAttr("api_cert_file", sb.Opts, "apiCertFile")
 	case "shell":
 		b.BindStringFn("step", func(step string) {
 			// It's OK if this type assertion fails
