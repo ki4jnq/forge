@@ -6,11 +6,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/ki4jnq/forge"
+	"github.com/ki4jnq/forge/config"
 )
 
 var (
-	cmd   *forge.Cmd
 	flags = flag.NewFlagSet("version", flag.ExitOnError)
 	conf  = &Config{
 		Format:   "%d.%d.%d",
@@ -42,13 +41,12 @@ func init() {
 	flags.BoolVar(&conf.PatInc, "pi", false, "Increment the patch version.")
 	flags.BoolVar(&conf.Save, "s", false, "Write the new version to the version file.")
 
-	cmd = &forge.Cmd{
+	config.Register(&config.Cmd{
 		Name:      "version",
 		Flags:     flags,
 		SubConf:   conf,
 		SubRunner: run,
-	}
-	forge.Register(cmd)
+	})
 }
 
 func run() error {

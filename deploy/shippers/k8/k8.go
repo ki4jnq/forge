@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-
 	"io/ioutil"
+	"strings"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
@@ -21,8 +20,6 @@ const (
 	currentK8Cluster = "overthere"
 	// Unlike the previous consts, k8Namespace is non-arbitrary.
 	k8Namespace = "default"
-
-	dockerHostString = "tma1"
 )
 
 var (
@@ -33,20 +30,20 @@ var (
 )
 
 type K8 struct {
-	*k8DeployWatcher
-	*k8ClientProvider
+	watcher        *k8DeployWatcher
+	clientProvider *k8ClientProvider
 
 	// needsRollback tracks whether any work must be done to rollback
 	// the deployment or not.
 	needsRollback bool
+	Opts          Options
 }
 
 func NewK8Shipper(opts map[string]interface{}) *K8 {
 	return &K8{
-		k8DeployWatcher: newK8DeployWatcher(),
-		k8ClientProvider: &k8ClientProvider{
-			Opts: opts,
-		},
+		watcher:        newK8DeployWatcher(),
+		clientProvider: &k8ClientProvider{},
+		Opts:           opts,
 	}
 }
 
@@ -76,13 +73,13 @@ func (ks *K8) Rollback(ctx context.Context) chan error {
 		defer close(ch)
 		defer ks.savePanics(ch)
 
-		client, err := ks.getK8Client()
+		client, err := ks.clientProvider.getK8Client(ks.Opts)
 		if err != nil {
 			ch <- err
 			return
 		}
 
-		rollback := &v1beta1.DeploymentRollback{Name: ks.mustLookup("name")}
+		rollback := &v1beta1.DeploymentRollback{Name: ks.Opts.mustLookup("name")}
 		err = client.ExtensionsV1beta1().Deployments(k8Namespace).Rollback(rollback)
 		if err != nil {
 			ch <- err
@@ -98,7 +95,7 @@ func (ks *K8) runDeploy(ch chan error) error {
 		return err
 	}
 
-	client, err := ks.getK8Client()
+	client, err := ks.clientProvider.getK8Client(ks.Opts)
 	if err != nil {
 		return err
 	}
@@ -117,7 +114,14 @@ func (ks *K8) runDeploy(ch chan error) error {
 	}
 	ks.needsRollback = true // Do we need this if `watchIt` works properly?
 
-	if err := ks.watchIt(client, ks.mustLookup("name"), tag, *deployment.Spec.Replicas, deployment.Status.ObservedGeneration); err != nil {
+	err = ks.watcher.watchIt(
+		client,
+		ks.Opts.mustLookup("name"),
+		tag,
+		*deployment.Spec.Replicas,
+		deployment.Status.ObservedGeneration,
+	)
+	if err != nil {
 		return err
 	}
 
@@ -130,7 +134,7 @@ func (ks *K8) getCurrentDeployment(client *kubernetes.Clientset) (*v1beta1.Deplo
 	deployments, err := client.ExtensionsV1beta1().
 		Deployments(k8Namespace).
 		List(v1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%v", ks.mustLookup("name")),
+			LabelSelector: fmt.Sprintf("app=%v", ks.Opts.mustLookup("name")),
 		})
 	if err != nil {
 		return nil, err
@@ -147,7 +151,7 @@ func (ks *K8) getCurrentDeployment(client *kubernetes.Clientset) (*v1beta1.Deplo
 func (ks *K8) updateDeploymentObject(deployment *v1beta1.Deployment, tag string) error {
 	containers := make([]*v1.Container, 0, len(deployment.Spec.Template.Spec.Containers))
 
-	imageName := ks.mustLookup("image")
+	imageName := ks.Opts.mustLookup("image")
 	for i, _ := range deployment.Spec.Template.Spec.Containers {
 		c := &deployment.Spec.Template.Spec.Containers[i]
 		parts := strings.Split(c.Image, ":")
@@ -182,16 +186,6 @@ func (ks *K8) updateK8Deployment(client *kubernetes.Clientset, deployment *v1bet
 func (ks *K8) readTag() (string, error) {
 	buffer, err := ioutil.ReadFile("VERSION")
 	return strings.Trim(string(buffer), " \n"), err
-}
-
-// TODO: The configuration should be verified at an early step, as opposed to
-// paniking if things aren't exactly what we expect.
-func (ks *K8) mustLookup(key string) string {
-	name, ok := ks.Opts[key].(string)
-	if !ok {
-		panic(ConfigErr{key})
-	}
-	return name
 }
 
 func (ks *K8) savePanics(ch chan error) {

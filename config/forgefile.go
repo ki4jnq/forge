@@ -1,4 +1,4 @@
-package forge
+package config
 
 func NewParser(env string) *Unformatter {
 	envUnformatter := EnvUnformatter{

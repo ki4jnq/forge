@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ki4jnq/forge"
+	"github.com/ki4jnq/forge/config"
 )
 
 var (
@@ -21,7 +21,7 @@ type Config struct {
 }
 
 func init() {
-	forge.Register(&forge.Cmd{
+	config.Register(&config.Cmd{
 		Name:      "run",
 		Flags:     flags,
 		SubConf:   conf,
