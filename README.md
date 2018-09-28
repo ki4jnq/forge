@@ -225,7 +225,7 @@ echo "apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: my-service-account
-" | kubectl create -f
+" | kubectl create -f -
 ```
 
 Add a secret, this generates the tokens:
