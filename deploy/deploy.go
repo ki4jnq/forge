@@ -9,7 +9,12 @@ import (
 	"sync"
 
 	"github.com/ki4jnq/forge"
+<<<<<<< HEAD
 	"github.com/ki4jnq/forge/deploy/options"
+=======
+	"github.com/ki4jnq/forge/deploy/engine"
+	"github.com/ki4jnq/forge/deploy/shippers"
+>>>>>>> Deploy engine abstraction WIP.
 )
 
 var (
@@ -41,16 +46,21 @@ func init() {
 }
 
 func run() error {
+<<<<<<< HEAD
 	var deployErr error
 	var mustRollback bool
 	ctx, cancel := buildContext()
 	defer cancel()
 
 	shippers := make(map[string]Shipper, len(conf))
+=======
+	shippers := make(map[string]engine.Shipper, len(conf))
+>>>>>>> Deploy engine abstraction WIP.
 	for target, block := range conf {
 		shippers[target] = block.toShipper()
 	}
 
+<<<<<<< HEAD
 	errOnce := sync.Once{}
 	deployCh := fanIn(shippers, func(shipper Shipper) chan error {
 		return shipper.ShipIt(ctx)
@@ -113,8 +123,11 @@ func fanIn(shippers map[string]Shipper, fn func(shipper Shipper) chan error) cha
 		wg.Wait()
 		close(aggregator)
 	}()
+=======
+	eng := engine.NewEngine(shippers...)
+>>>>>>> Deploy engine abstraction WIP.
 
-	return aggregator
+	return eng.Run()
 }
 
 func buildContext() (context.Context, context.CancelFunc) {

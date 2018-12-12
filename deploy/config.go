@@ -10,16 +10,17 @@ import (
 
 var ErrNotAShipper = errors.New("Undefined shipper requested in Forgefile")
 
-type Ctx context.Context
-
 type Config map[string]shipperBlock
 
+// shipperBlock represents a configuration block from the Forgefile for an
+// individual shipper object.
 type shipperBlock struct {
 	ShipperName string `yaml:"shipper"`
 	Opts        map[string]interface{}
 }
 
-func (sb *shipperBlock) toShipper() Shipper {
+// toShipper builds a Shipper object from the configuration.
+func (sb *shipperBlock) toShipper() engine.Shipper {
 	switch sb.ShipperName {
 	case "null-shipper":
 		return shippers.NullShipper{}
@@ -33,6 +34,8 @@ func (sb *shipperBlock) toShipper() Shipper {
 		return &shippers.ShellShipper{Opts: sb.Opts}
 	case "app-engine":
 		return shippers.NewAppEngineShipper(sb.Opts)
+	case "scripts":
+		return shippers.NewScriptsShipper(sb.Opts)
 	default:
 		panic(ErrNotAShipper)
 	}
