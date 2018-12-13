@@ -9,21 +9,27 @@ import (
 	"sync"
 
 	"github.com/ki4jnq/forge"
-	"github.com/ki4jnq/forge/deploy/shippers"
+	"github.com/ki4jnq/forge/deploy/options"
 )
 
 var (
 	conf  = Config{}
 	flags = flag.NewFlagSet("deploy", flag.ExitOnError)
-	args  = shippers.CmdArgs{}
+	opts  = &options.Options{}
 )
 
 func init() {
 	flags.StringVar(
-		&args.AppEngine.ImageTag,
+		&opts.AppEngine.ImageTag,
 		"ae-image-tag",
 		"",
 		"The AppEngine Docker image tag to deploy",
+	)
+	flags.StringVar(
+		&opts.Version,
+		"version",
+		"",
+		"The version number to deploy.",
 	)
 
 	forge.Register(&forge.Cmd{
@@ -37,7 +43,7 @@ func init() {
 func run() error {
 	var deployErr error
 	var mustRollback bool
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := buildContext()
 	defer cancel()
 
 	shippers := make(map[string]Shipper, len(conf))
@@ -69,7 +75,7 @@ func run() error {
 	fmt.Printf("The error message was: %v\n", deployErr)
 	fmt.Println(strings.Repeat("*", 80))
 
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel = buildContext()
 	defer cancel()
 	rollbackCh := fanIn(shippers, func(shipper Shipper) chan error {
 		return shipper.Rollback(ctx)
@@ -109,4 +115,9 @@ func fanIn(shippers map[string]Shipper, fn func(shipper Shipper) chan error) cha
 	}()
 
 	return aggregator
+}
+
+func buildContext() (context.Context, context.CancelFunc) {
+	ctx := opts.InContext(context.Background())
+	return context.WithCancel(ctx)
 }
