@@ -9,6 +9,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+const (
+	// These are arbitrary and serve only to identify items within the K8
+	// configuration itself.
+	currentK8Context = "theonlyonewecareabout"
+	currentK8User    = "justme"
+	currentK8Cluster = "overthere"
+	// Unlike the previous consts, k8Namespace is non-arbitrary.
+	k8Namespace = "default"
+)
+
 var (
 	ErrMissingConfig = errors.New("Missing some expected configuration values.")
 	ErrConfigInvalid = errors.New("A configuration option is invalid.")

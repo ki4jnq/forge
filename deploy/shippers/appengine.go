@@ -6,17 +6,18 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+
+	"github.com/ki4jnq/forge/deploy/options"
 )
 
 type AppEngine struct {
 	tmpAppEngineConfig string
 
-	version string
 	image   string
 	appYaml map[interface{}]interface{}
 }
 
-func NewAppEngineShipper(opts map[string]interface{}, args CmdArgs) *AppEngine {
+func NewAppEngineShipper(opts map[string]interface{}) *AppEngine {
 	image, _ := opts["image"].(string)
 
 	appYaml, ok := opts["gcloud"].(map[interface{}]interface{})
@@ -25,7 +26,6 @@ func NewAppEngineShipper(opts map[string]interface{}, args CmdArgs) *AppEngine {
 	}
 
 	ae := &AppEngine{
-		version: args.AppEngine.ImageTag,
 		image:   image,
 		appYaml: appYaml,
 	}
@@ -84,11 +84,13 @@ func (ae *AppEngine) generateAppYaml(_ context.Context) error {
 }
 
 func (ae *AppEngine) deploy(ctx context.Context) error {
+	version := options.FromContext(ctx).AppEngine.ImageTag
+
 	// NOTE: Eventually we could use exec.CommandContext so that if the
 	// context is canceled the build will be automatically halted.
 	cmdArgs := []string{"app", "deploy", "--quiet"}
-	if ae.image != "" && ae.version != "" {
-		cmdArgs = append(cmdArgs, "--image-url", ae.image+":"+ae.version)
+	if ae.image != "" && version != "" {
+		cmdArgs = append(cmdArgs, "--image-url", ae.image+":"+version)
 	} else if ae.image != "" {
 		cmdArgs = append(cmdArgs, "--image-url", ae.image)
 	}

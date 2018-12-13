@@ -32,8 +32,7 @@ func (sb *shipperBlock) toShipper() Shipper {
 	case "shell":
 		return &shippers.ShellShipper{Opts: sb.Opts}
 	case "app-engine":
-		// args holds extra commandline arguments.
-		return shippers.NewAppEngineShipper(sb.Opts, args)
+		return shippers.NewAppEngineShipper(sb.Opts)
 	default:
 		panic(ErrNotAShipper)
 	}

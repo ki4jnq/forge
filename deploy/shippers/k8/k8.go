@@ -11,18 +11,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
-)
 
-const (
-	// These are arbitrary and serve only to identify items within the K8
-	// configuration itself.
-	currentK8Context = "theonlyonewecareabout"
-	currentK8User    = "justme"
-	currentK8Cluster = "overthere"
-	// Unlike the previous consts, k8Namespace is non-arbitrary.
-	k8Namespace = "default"
-
-	dockerHostString = "tma1"
+	"github.com/ki4jnq/forge/deploy/options"
 )
 
 var (
@@ -58,7 +48,7 @@ func (ks *K8) ShipIt(ctx context.Context) chan error {
 		defer close(ch)
 		defer ks.savePanics(ch)
 
-		if err := ks.runDeploy(ch); err != nil {
+		if err := ks.runDeploy(ctx, ch); err != nil {
 			ch <- err
 		}
 	}()
@@ -92,8 +82,8 @@ func (ks *K8) Rollback(ctx context.Context) chan error {
 }
 
 // runDeploy coordinates all of the actual work performed during the deploy.
-func (ks *K8) runDeploy(ch chan error) error {
-	tag, err := ks.readTag()
+func (ks *K8) runDeploy(ctx context.Context, ch chan error) error {
+	tag, err := ks.readTag(ctx)
 	if err != nil {
 		return err
 	}
@@ -179,7 +169,12 @@ func (ks *K8) updateK8Deployment(client *kubernetes.Clientset, deployment *v1bet
 	return err
 }
 
-func (ks *K8) readTag() (string, error) {
+func (ks *K8) readTag(ctx context.Context) (string, error) {
+	version := options.FromContext(ctx).Version
+	if version != "" {
+		return version, nil
+	}
+
 	buffer, err := ioutil.ReadFile("VERSION")
 	return strings.Trim(string(buffer), " \n"), err
 }
