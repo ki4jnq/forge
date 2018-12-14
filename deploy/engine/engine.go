@@ -1,16 +1,29 @@
 package engine
 
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+)
+
 type Engine struct {
 	Shippers map[string]Shipper
+
+	opts *Options
 }
 
-func NewEngine(shippers ...Shipper) *Engine {
-	return &Engine{Shippers: shippers}
+func NewEngine(opts *Options, shippers map[string]Shipper) *Engine {
+	return &Engine{
+		opts:     opts,
+		Shippers: shippers,
+	}
 }
 
 func (eng *Engine) Run() error {
 	var deployErr error
-	var mustRollback bool
+	//var mustRollback bool
 
 	// Run the deploy and return if everything works.
 	if err := eng.runDeploy(); err == nil {
@@ -32,10 +45,10 @@ func (eng *Engine) Run() error {
 // runDeploy runs every shipper's ShipIt method with a shared context and
 // returns the error
 func (eng *Engine) runDeploy() (err error) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := eng.buildContext()
 	defer cancel()
 
-	deployCh := fanIn(eng.Shippers, func(shipper Shipper) chan error {
+	deployCh := eng.fanIn(func(shipper Shipper) chan error {
 		return shipper.ShipIt(ctx)
 	})
 
@@ -48,10 +61,10 @@ func (eng *Engine) runDeploy() (err error) {
 }
 
 func (eng *Engine) runRollback() (err error) {
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel := eng.buildContext()
 	defer cancel()
 
-	rollbackCh := fanIn(eng.Shippers, func(shipper Shipper) chan error {
+	rollbackCh := eng.fanIn(func(shipper Shipper) chan error {
 		return shipper.Rollback(ctx)
 	})
 
@@ -63,13 +76,18 @@ func (eng *Engine) runRollback() (err error) {
 	return
 }
 
+func (eng *Engine) buildContext() (context.Context, context.CancelFunc) {
+	ctx := eng.opts.InContext(context.Background())
+	return context.WithCancel(ctx)
+}
+
 // fanIn runs fn against every Shipper and fans in all errors from their
 // returned channels onto a single aggregate channel, which it returns.
-func fanIn(shippers map[string]Shipper, fn func(shipper Shipper) chan error) chan error {
+func (eng *Engine) fanIn(fn func(shipper Shipper) chan error) chan error {
 	var wg sync.WaitGroup
 	aggregator := make(chan error)
 
-	for target, shipper := range shippers {
+	for target, shipper := range eng.Shippers {
 		wg.Add(1)
 		go func(target string, shipper Shipper) {
 			defer wg.Done()

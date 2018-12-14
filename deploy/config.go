@@ -1,9 +1,9 @@
 package deploy
 
 import (
-	"context"
 	"errors"
 
+	"github.com/ki4jnq/forge/deploy/engine"
 	"github.com/ki4jnq/forge/deploy/shippers"
 	"github.com/ki4jnq/forge/deploy/shippers/k8"
 )
@@ -34,8 +34,6 @@ func (sb *shipperBlock) toShipper() engine.Shipper {
 		return &shippers.ShellShipper{Opts: sb.Opts}
 	case "app-engine":
 		return shippers.NewAppEngineShipper(sb.Opts)
-	case "scripts":
-		return shippers.NewScriptsShipper(sb.Opts)
 	default:
 		panic(ErrNotAShipper)
 	}
