@@ -8,16 +8,22 @@ import (
 	"sync"
 )
 
+// Engine manages the details of orchestrating deployments across a range of
+// deployment targets.
 type Engine struct {
 	Shippers map[string]Shipper
 }
 
+// NewEngine creates a new Engine that manages the provided shippers.
 func NewEngine(shippers map[string]Shipper) *Engine {
 	return &Engine{
 		Shippers: shippers,
 	}
 }
 
+// Run performs a deployment based on the configured shippers and the provided
+// options. A failure in a single shipper will result in a rollback being
+// issued across all shippers as well.
 func (eng *Engine) Run(opts Options) (err error) {
 	ctx := ContextForOptions(opts)
 

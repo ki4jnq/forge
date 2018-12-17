@@ -54,7 +54,8 @@ func (kcp *k8ClientProvider) configGetter() (*api.Config, error) {
 
 	attrs := []string{"server"}
 	basicAuthAttrs := []string{"username", "password"}
-	tokenAuthAttrs := []string{"token"}
+	tokenAuthDataAttrs := []string{"token"}
+	tokenAuthAttrs := []string{"tokenFile"}
 	certAuthAttrs := []string{"apiCertFile", "apiKeyFile"}
 	certAuthDataAttrs := []string{"apiCert", "apiKey"}
 
@@ -71,7 +72,8 @@ func (kcp *k8ClientProvider) configGetter() (*api.Config, error) {
 	readers := [](func() error){
 		func() error { return kcp.readConfigInto(basicAuthAttrs, &auth.Username, &auth.Password) },
 		func() error { return kcp.readConfigInto(certAuthAttrs, &auth.ClientCertificate, &auth.ClientKey) },
-		func() error { return kcp.readConfigInto(tokenAuthAttrs, &auth.Token) },
+		func() error { return kcp.readConfigInto(tokenAuthDataAttrs, &auth.Token) },
+		func() error { return kcp.readConfigInto(tokenAuthAttrs, &auth.TokenFile) },
 		func() error {
 			return kcp.readConfigInto(certAuthDataAttrs, &auth.ClientCertificateData, &auth.ClientKeyData)
 		},
