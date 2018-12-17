@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"github.com/ki4jnq/forge/deploy/engine"
 )
 
 type ShellShipper struct {
@@ -15,6 +17,8 @@ type ShellShipper struct {
 func (shsh *ShellShipper) ShipIt(ctx context.Context) chan error {
 	ch := make(chan error)
 	steps := shsh.Opts["steps"].([]interface{})
+	opts := engine.OptionsFromContext(ctx)
+
 	go func() {
 		defer close(ch)
 		defer failSafe("ShellShipper", ch)
@@ -34,7 +38,7 @@ func (shsh *ShellShipper) ShipIt(ctx context.Context) chan error {
 				return
 			}
 
-			bash := exec.Command("bash", "-c", step)
+			bash := exec.Command("bash", "-c", step, "--", opts.Version)
 			bash.Stdout = os.Stdout
 			bash.Stderr = os.Stderr
 

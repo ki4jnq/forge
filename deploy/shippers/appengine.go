@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/ki4jnq/forge/deploy/options"
+	"github.com/ki4jnq/forge/deploy/engine"
 )
 
 type AppEngine struct {
@@ -84,7 +84,7 @@ func (ae *AppEngine) generateAppYaml(_ context.Context) error {
 }
 
 func (ae *AppEngine) deploy(ctx context.Context) error {
-	version := options.FromContext(ctx).AppEngine.ImageTag
+	version := engine.OptionsFromContext(ctx).AppEngine.ImageTag
 
 	// NOTE: Eventually we could use exec.CommandContext so that if the
 	// context is canceled the build will be automatically halted.

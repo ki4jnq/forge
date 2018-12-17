@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
-	"github.com/ki4jnq/forge/deploy/options"
+	"github.com/ki4jnq/forge/deploy/engine"
 )
 
 var (
@@ -170,7 +170,7 @@ func (ks *K8) updateK8Deployment(client *kubernetes.Clientset, deployment *v1bet
 }
 
 func (ks *K8) readTag(ctx context.Context) (string, error) {
-	version := options.FromContext(ctx).Version
+	version := engine.OptionsFromContext(ctx).Version
 	if version != "" {
 		return version, nil
 	}

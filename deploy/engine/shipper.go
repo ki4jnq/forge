@@ -1,4 +1,4 @@
-package deploy
+package engine
 
 import "context"
 
@@ -7,3 +7,5 @@ type Shipper interface {
 	ShipIt(context.Context) chan error
 	Rollback(context.Context) chan error
 }
+
+type Shippers map[string]Shipper
