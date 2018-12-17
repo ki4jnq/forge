@@ -22,7 +22,7 @@ func (eng *Engine) Run(opts Options) (err error) {
 	ctx := ContextForOptions(opts)
 
 	// Run the deploy and return if everything works.
-	if err := eng.runDeploy(ctx); err == nil {
+	if err = eng.runDeploy(ctx); err == nil {
 		return nil
 	}
 
@@ -31,7 +31,7 @@ func (eng *Engine) Run(opts Options) (err error) {
 	fmt.Printf("The error message was: %v\n", err)
 	fmt.Println(strings.Repeat("*", 80))
 
-	if err := eng.runRollback(ctx); err != nil {
+	if err = eng.runRollback(ctx); err != nil {
 		return nil
 	}
 
