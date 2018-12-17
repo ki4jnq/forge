@@ -177,9 +177,10 @@ Options for an authentication scheme must be provided as well. The following tab
 
 The easiest and most universal method is to use Kubernetes Service Accounts and access tokens. You can read about Kubernetes Service accounts [here](https://kubernetes.io/docs/admin/service-accounts-admin/), or skip down in this readme to "Generating a Kubernetes Service Account".
 
-| Name        | Required | Value                                            |
-|-------------|----------|--------------------------------------------------|
-| token       | Yes      | An access token for a Kubernetes service account |
+| Name        | Required | Value                                                         |
+|-------------|----------|---------------------------------------------------------------|
+| token       | Yes      | An access token for a Kubernetes service account              |
+| tokenFile   | Yes      | The path to the access token for a Kubernetes service account |
 
 You could also set a Private Key and Certificate:
 
