@@ -10,7 +10,7 @@ import (
 var (
 	conf  = Config{}
 	flags = flag.NewFlagSet("deploy", flag.ExitOnError)
-	opts  = &engine.Options{}
+	opts  = engine.Options{}
 )
 
 func init() {
@@ -41,6 +41,6 @@ func run() error {
 		shippers[target] = block.toShipper()
 	}
 
-	eng := engine.NewEngine(opts, shippers)
-	return eng.Run()
+	eng := engine.NewEngine(shippers)
+	return eng.Run(opts)
 }
