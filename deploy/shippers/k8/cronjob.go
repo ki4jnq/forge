@@ -29,6 +29,8 @@ func (cj *cronjob) update(client *kubernetes.Clientset, name, image, tag string)
 	return nil
 }
 
+// getCurrentJob retrieves the Cron Job object whose "app" label
+// matches the "name" from Forge's config.
 func (cj *cronjob) getCurrentJob(
 	client *kubernetes.Clientset,
 	name string,
@@ -53,18 +55,41 @@ func (cj *cronjob) getCurrentJob(
 	return &jobs.Items[0], nil
 }
 
-func (cj *cronjob) updateObject(jobObj *v1beta1.CronJob, image, tag string) error {
-	var containers []v1.Container
+// updateObject updates the cron job object's container.image to the use the
+// new `tag`.
+func (cj *cronjob) updateObject(
+	jobObj *v1beta1.CronJob,
+	image string,
+	tag string,
+) error {
+	containerList := jobObj.Spec.JobTemplate.Spec.Template.Spec.Containers
+	containers := make([]*v1.Container, 0, len(containerList))
 
-	for _, c := range jobObj.Spec.JobTemplate.Spec.Template.Spec.Containers {
+	for _, c := range containerList {
 		parts := strings.Split(c.Image, ":")
 		if parts[0] == image {
-			containers = append(containers, c)
+			containers = append(containers, &c)
 		}
 	}
 
 	if len(containers) <= 0 {
 		return ErrNoMatchingContainer
+	}
+
+	if image == "" {
+		return ErrNoImage
+	}
+
+	if jobObj.Spec.JobTemplate.Labels == nil {
+		jobObj.Spec.JobTemplate.Labels = make(map[string]string)
+	}
+
+	// Also make sure to update the cronJob's metadata to match the new tag.
+	jobObj.Labels["version"] = tag
+	jobObj.Spec.JobTemplate.Labels["version"] = tag
+
+	for _, c := range containers {
+		c.Image = fmt.Sprintf("%v:%v", image, tag)
 	}
 
 	return nil

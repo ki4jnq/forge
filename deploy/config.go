@@ -29,7 +29,9 @@ func (sb *shipperBlock) toShipper() engine.Shipper {
 	case "s3-copy":
 		return &shippers.S3Copy{}
 	case "k8":
-		return k8.NewK8Shipper(sb.Opts)
+		return k8.NewDeploymentShipper(sb.Opts)
+	case "k8-cron":
+		return k8.NewCronShipper(sb.Opts)
 	case "shell":
 		return &shippers.ShellShipper{Opts: sb.Opts}
 	case "app-engine":

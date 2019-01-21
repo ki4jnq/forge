@@ -26,6 +26,18 @@ func (d *deployment) update(client *kubernetes.Clientset, name, image, tag strin
 		return err
 	}
 
+	watcher := newK8DeployWatcher()
+	err = watcher.watchIt(
+		client,
+		name,
+		tag,
+		*deployment.Spec.Replicas,
+		deployment.Status.ObservedGeneration,
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -43,6 +55,7 @@ func (d *deployment) getCurrentDeployment(
 		List(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("app=%v", name),
 		})
+
 	if err != nil {
 		return nil, err
 	} else if len(deployments.Items) > 1 {
@@ -50,24 +63,27 @@ func (d *deployment) getCurrentDeployment(
 	} else if len(deployments.Items) < 1 {
 		return nil, ErrUnmatchedName
 	}
+
 	return &deployments.Items[0], nil
 }
 
-// updateDeploymentObject updates the deployment object's container.image to the one
-// that is going to be deployed based on the VERSION file.
+// updateDeploymentObject updates the deployment object's container.image to
+// the new `tag`.
 func (d *deployment) updateDeploymentObject(
 	deployment *v1beta1.Deployment,
 	image string,
 	tag string,
 ) error {
-	containers := make([]*v1.Container, 0, len(deployment.Spec.Template.Spec.Containers))
+	containerList := deployment.Spec.Template.Spec.Containers
+	containers := make([]*v1.Container, 0, len(containerList))
 
-	for _, c := range deployment.Spec.Template.Spec.Containers {
+	for _, c := range containerList {
 		parts := strings.Split(c.Image, ":")
 		if parts[0] == image {
 			containers = append(containers, &c)
 		}
 	}
+
 	if len(containers) <= 0 {
 		return ErrNoMatchingContainer
 	}
@@ -76,7 +92,11 @@ func (d *deployment) updateDeploymentObject(
 		return ErrNoImage
 	}
 
-	// Also make sure to update the deployments metadata to match the new tag.
+	if deploy.Spec.Template.Labels == nil {
+		deploy.Spec.Template.Labels = make(map[string]string)
+	}
+
+	// Also make sure to update the deployment's metadata to match the new tag.
 	deployment.Labels["version"] = tag
 	deployment.Spec.Template.Labels["version"] = tag
 

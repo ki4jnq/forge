@@ -26,7 +26,6 @@ type updater interface {
 }
 
 type K8 struct {
-	*k8DeployWatcher
 	*k8ClientProvider
 
 	// updater manages updating specific objects in Kubernetes, e.g.
@@ -38,13 +37,24 @@ type K8 struct {
 	needsRollback bool
 }
 
-func NewK8Shipper(opts map[string]interface{}) *K8 {
+func newK8Shipper(opts map[string]interface{}) *K8 {
 	return &K8{
-		k8DeployWatcher: newK8DeployWatcher(),
 		k8ClientProvider: &k8ClientProvider{
 			Opts: opts,
 		},
 	}
+}
+
+func NewCronShipper(opts map[string]interface{}) *K8 {
+	shipper := newK8Shipper(opts)
+	shipper.updater = &cronjob{}
+	return shipper
+}
+
+func NewDeploymentShipper(opts map[string]interface{}) *K8 {
+	shipper := newK8Shipper(opts)
+	shipper.updater = &deployment{}
+	return shipper
 }
 
 func (ks *K8) ShipIt(ctx context.Context) chan error {
@@ -111,18 +121,6 @@ func (ks *K8) runDeploy(ctx context.Context, ch chan error) error {
 	if err != nil {
 		return err
 	}
-	//ks.needsRollback = true // Do we need this if `watchIt` works properly?
-
-	//err = ks.watchIt(
-	//	client,
-	//	ks.mustLookup("name"),
-	//	tag,
-	//	*deployment.Spec.Replicas,
-	//	deployment.Status.ObservedGeneration,
-	//)
-	//if err != nil {
-	//	return err
-	//}
 
 	return nil
 }
