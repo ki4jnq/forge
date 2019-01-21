@@ -3,9 +3,9 @@ package k8
 import (
 	"errors"
 	"fmt"
-
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
 )
 
 type deployStatus int
@@ -44,7 +44,7 @@ func newK8DeployWatcher() *k8DeployWatcher {
 func (kdw *k8DeployWatcher) watchIt(client *kubernetes.Clientset, name, version string, expectedReplicas int32, gen int64) error {
 	podWatcher, err := client.CoreV1().
 		Pods(k8Namespace).
-		Watch(v1.ListOptions{
+		Watch(metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("app=%v,version=%v", name, version),
 		})
 	if err != nil {

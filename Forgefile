@@ -1,0 +1,16 @@
+development:
+  deploy:
+    echo1:
+      shipper: shell
+      opts:
+        steps:
+        - echo "Deploying $1 to target echo1"
+    nginx:
+      shipper: k8
+      opts:
+        name: nginx
+        image: nginx
+        server: https://192.168.99.100:8443
+        caFile: /Users/andrewknapp/.minikube/ca.crt
+        apiKeyFile: /Users/andrewknapp/.minikube/client.key
+        apiCertFile: /Users/andrewknapp/.minikube/client.crt
