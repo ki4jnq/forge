@@ -169,13 +169,20 @@ A complete list of available `opts` for the Kubernetes shipper can be found in t
 
 | Name        | Required | Value                                                        |
 |-------------|----------|--------------------------------------------------------------|
+| name        | Yes      | The Deployment name                                          |
+| image       | Yes      | The Docker image name, without the tag                       |
 | server      | Yes      | http(s)://hostname(:port)                                    |
 | ca          |          | The PEM encoded Certificate Authority for the Kubernetes SSL |
 | caFile      |          | The path to the PEM encoded Certificate Authority            |
 
-Options for an authentication scheme must be provided as well. The following tables show the required `opts` for each available authentication scheme. You only need to provide the configuration for one of these.
+Options for an authentication scheme must be provided as well. The following
+tables show the required `opts` for each available authentication scheme.
+You only need to provide the configuration for one of these.
 
-The easiest and most universal method is to use Kubernetes Service Accounts and access tokens. You can read about Kubernetes Service accounts [here](https://kubernetes.io/docs/admin/service-accounts-admin/), or skip down in this readme to "Generating a Kubernetes Service Account".
+The easiest and most universal method is to use Kubernetes Service Accounts
+and access tokens. You can read about Kubernetes Service accounts
+[here](https://kubernetes.io/docs/admin/service-accounts-admin/), or skip
+down in this readme to "Generating a Kubernetes Service Account".
 
 | Name        | Required | Value                                                         |
 |-------------|----------|---------------------------------------------------------------|
@@ -196,9 +203,26 @@ Or, you could load the Private Key and Certificate from their own files (This is
 | apiKeyFile  | Yes      | Same as `apiKey` but specifies a path to a file, requires `apiCertFile` |
 | apiCertFile | Yes      | Same as `apiCert` but specifies a path to a file, requires `apiKeyFile` |
 
+##### Cron Jobs
+
+You can also use the same options to update a CronJob instead of a
+Deployment, just use the `k8-cron` shipper instead of `k8` in your
+Forgefile, like so:
+
+```yaml
+development:
+  deploy:
+    cron:
+      shipper: k8-cron # <-Use `k8-cron` here.
+      opts:
+        server: https://mycluserhost
+        # ...
+        # Everything else is the same.
+```
+
 #### Run
 
-  The run sub-command can be used to pass default arguments to commonly used commands. For example, if you don't want to type all
+The run sub-command can be used to pass default arguments to commonly used commands. For example, if you don't want to type all
 of the `psql` connection parameters every time you connect to your DB, you could define a `run` target in you Forgefile like this:
 
 ```yaml
