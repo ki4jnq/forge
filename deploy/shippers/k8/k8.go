@@ -9,35 +9,46 @@ import (
 	"io/ioutil"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
 	"github.com/ki4jnq/forge/deploy/engine"
 )
 
 var (
-	ErrNonUniqueDeploymentName = errors.New("The deployment name matched more than one deployment in Kubernetes.")
-	ErrUnmatchedDeploymentName = errors.New("The deployment could not be found on this Kubernetes cluster.")
-	ErrNoMatchingContainer     = errors.New("A container could not be found that matched the name.")
-	ErrNoImage                 = errors.New("No matching container image could be found.")
+	ErrNonUniqueName = errors.New("The resource name matched more than one deployment in Kubernetes.")
+	ErrUnmatchedName = errors.New("The resource could not be found on this Kubernetes cluster.")
 )
 
-type K8 struct {
-	*k8DeployWatcher
-	*k8ClientProvider
-
-	// needsRollback tracks whether any work must be done to rollback
-	// the deployment or not.
-	needsRollback bool
+type updater interface {
+	update(cl *kubernetes.Clientset, name, image, tag string) error
+	rollback(cl *kubernetes.Clientset, name string) error
 }
 
-func NewK8Shipper(opts map[string]interface{}) *K8 {
+type K8 struct {
+	*k8ClientProvider
+
+	// updater manages updating specific objects in Kubernetes, e.g.
+	// Deployments.
+	updater updater
+}
+
+func newK8Shipper(opts map[string]interface{}) *K8 {
 	return &K8{
-		k8DeployWatcher: newK8DeployWatcher(),
 		k8ClientProvider: &k8ClientProvider{
 			Opts: opts,
 		},
 	}
+}
+
+func NewCronShipper(opts map[string]interface{}) *K8 {
+	shipper := newK8Shipper(opts)
+	shipper.updater = &cronjob{}
+	return shipper
+}
+
+func NewDeploymentShipper(opts map[string]interface{}) *K8 {
+	shipper := newK8Shipper(opts)
+	shipper.updater = &deployment{}
+	return shipper
 }
 
 func (ks *K8) ShipIt(ctx context.Context) chan error {
@@ -48,7 +59,7 @@ func (ks *K8) ShipIt(ctx context.Context) chan error {
 		defer close(ch)
 		defer ks.savePanics(ch)
 
-		if err := ks.runDeploy(ctx, ch); err != nil {
+		if err := ks.runDeploy(ctx); err != nil {
 			ch <- err
 		}
 	}()
@@ -57,10 +68,6 @@ func (ks *K8) ShipIt(ctx context.Context) chan error {
 
 func (ks *K8) Rollback(ctx context.Context) chan error {
 	ch := make(chan error)
-	if !ks.needsRollback {
-		close(ch)
-		return ch
-	}
 
 	go func() {
 		defer close(ch)
@@ -72,8 +79,7 @@ func (ks *K8) Rollback(ctx context.Context) chan error {
 			return
 		}
 
-		rollback := &v1beta1.DeploymentRollback{Name: ks.mustLookup("name")}
-		err = client.ExtensionsV1beta1().Deployments(k8Namespace).Rollback(rollback)
+		ks.updater.rollback(client, ks.mustLookup("name"))
 		if err != nil {
 			ch <- err
 		}
@@ -82,7 +88,7 @@ func (ks *K8) Rollback(ctx context.Context) chan error {
 }
 
 // runDeploy coordinates all of the actual work performed during the deploy.
-func (ks *K8) runDeploy(ctx context.Context, ch chan error) error {
+func (ks *K8) runDeploy(ctx context.Context) error {
 	tag, err := ks.readTag(ctx)
 	if err != nil {
 		return err
@@ -93,80 +99,17 @@ func (ks *K8) runDeploy(ctx context.Context, ch chan error) error {
 		return err
 	}
 
-	deployment, err := ks.getCurrentDeployment(client)
+	err = ks.updater.update(
+		client,
+		ks.mustLookup("name"),
+		ks.mustLookup("image"),
+		tag,
+	)
 	if err != nil {
 		return err
 	}
 
-	if err := ks.updateDeploymentObject(deployment, tag); err != nil {
-		return err
-	}
-
-	if err := ks.updateK8Deployment(client, deployment); err != nil {
-		return err
-	}
-	ks.needsRollback = true // Do we need this if `watchIt` works properly?
-
-	if err := ks.watchIt(client, ks.mustLookup("name"), tag, *deployment.Spec.Replicas, deployment.Status.ObservedGeneration); err != nil {
-		return err
-	}
-
 	return nil
-}
-
-// getCurrentDeployment retrieves the deployment object whose "app" label
-// matches the "name" from Forge's config.
-func (ks *K8) getCurrentDeployment(client *kubernetes.Clientset) (*v1beta1.Deployment, error) {
-	deployments, err := client.ExtensionsV1beta1().
-		Deployments(k8Namespace).
-		List(v1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%v", ks.mustLookup("name")),
-		})
-	if err != nil {
-		return nil, err
-	} else if len(deployments.Items) > 1 {
-		return nil, ErrNonUniqueDeploymentName
-	} else if len(deployments.Items) < 1 {
-		return nil, ErrUnmatchedDeploymentName
-	}
-	return &deployments.Items[0], nil
-}
-
-// updateDeploymentObject updates the deployment object's container.image to the one
-// that is going to be deployed based on the VERSION file.
-func (ks *K8) updateDeploymentObject(deployment *v1beta1.Deployment, tag string) error {
-	containers := make([]*v1.Container, 0, len(deployment.Spec.Template.Spec.Containers))
-
-	imageName := ks.mustLookup("image")
-	for i, _ := range deployment.Spec.Template.Spec.Containers {
-		c := &deployment.Spec.Template.Spec.Containers[i]
-		parts := strings.Split(c.Image, ":")
-		if parts[0] == imageName {
-			containers = append(containers, c)
-		}
-	}
-	if len(containers) <= 0 {
-		return ErrNoMatchingContainer
-	}
-
-	if imageName == "" {
-		return ErrNoImage
-	}
-
-	// Also make sure to update the deployments metadata to match the new tag.
-	deployment.Labels["version"] = tag
-	deployment.Spec.Template.Labels["version"] = tag
-
-	for _, c := range containers {
-		c.Image = fmt.Sprintf("%v:%v", imageName, tag)
-	}
-
-	return nil
-}
-
-func (ks *K8) updateK8Deployment(client *kubernetes.Clientset, deployment *v1beta1.Deployment) error {
-	_, err := client.ExtensionsV1beta1().Deployments(k8Namespace).Update(deployment)
-	return err
 }
 
 func (ks *K8) readTag(ctx context.Context) (string, error) {
