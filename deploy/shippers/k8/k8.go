@@ -8,21 +8,19 @@ import (
 
 	"io/ioutil"
 
-	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/ki4jnq/forge/deploy/engine"
 )
 
 var (
-	ErrNonUniqueName       = errors.New("The resource name matched more than one deployment in Kubernetes.")
-	ErrUnmatchedName       = errors.New("The resource could not be found on this Kubernetes cluster.")
-	ErrNoMatchingContainer = errors.New("A container could not be found that matched the name.")
-	ErrNoImage             = errors.New("No matching container image could be found.")
+	ErrNonUniqueName = errors.New("The resource name matched more than one deployment in Kubernetes.")
+	ErrUnmatchedName = errors.New("The resource could not be found on this Kubernetes cluster.")
 )
 
 type updater interface {
 	update(cl *kubernetes.Clientset, name, image, tag string) error
+	rollback(cl *kubernetes.Clientset, name string) error
 }
 
 type K8 struct {
@@ -31,10 +29,6 @@ type K8 struct {
 	// updater manages updating specific objects in Kubernetes, e.g.
 	// Deployments.
 	updater updater
-
-	// needsRollback tracks whether any work must be done to rollback
-	// the deployment or not.
-	needsRollback bool
 }
 
 func newK8Shipper(opts map[string]interface{}) *K8 {
@@ -65,7 +59,7 @@ func (ks *K8) ShipIt(ctx context.Context) chan error {
 		defer close(ch)
 		defer ks.savePanics(ch)
 
-		if err := ks.runDeploy(ctx, ch); err != nil {
+		if err := ks.runDeploy(ctx); err != nil {
 			ch <- err
 		}
 	}()
@@ -74,10 +68,6 @@ func (ks *K8) ShipIt(ctx context.Context) chan error {
 
 func (ks *K8) Rollback(ctx context.Context) chan error {
 	ch := make(chan error)
-	if !ks.needsRollback {
-		close(ch)
-		return ch
-	}
 
 	go func() {
 		defer close(ch)
@@ -89,10 +79,7 @@ func (ks *K8) Rollback(ctx context.Context) chan error {
 			return
 		}
 
-		rollback := &v1beta1.DeploymentRollback{Name: ks.mustLookup("name")}
-		err = client.ExtensionsV1beta1().
-			Deployments(k8Namespace).
-			Rollback(rollback)
+		ks.updater.rollback(client, ks.mustLookup("name"))
 		if err != nil {
 			ch <- err
 		}
@@ -101,7 +88,7 @@ func (ks *K8) Rollback(ctx context.Context) chan error {
 }
 
 // runDeploy coordinates all of the actual work performed during the deploy.
-func (ks *K8) runDeploy(ctx context.Context, ch chan error) error {
+func (ks *K8) runDeploy(ctx context.Context) error {
 	tag, err := ks.readTag(ctx)
 	if err != nil {
 		return err

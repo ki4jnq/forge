@@ -2,10 +2,8 @@ package k8
 
 import (
 	"fmt"
-	"strings"
 
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -18,14 +16,18 @@ func (cj *cronjob) update(client *kubernetes.Clientset, name, image, tag string)
 		return err
 	}
 
-	if err := cj.updateObject(job, image, tag); err != nil {
-		return err
-	}
+	cj.updateObject(job, image, tag)
 
 	if err := cj.updateCronJobObject(client, job); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// rollback is a noop for CronJobs because they do not support rollbacks in
+// the Kubernetes API.
+func (cj *cronjob) rollback(_ *kubernetes.Clientset, _ string) error {
 	return nil
 }
 
@@ -61,24 +63,12 @@ func (cj *cronjob) updateObject(
 	jobObj *v1beta1.CronJob,
 	image string,
 	tag string,
-) error {
-	containerList := jobObj.Spec.JobTemplate.Spec.Template.Spec.Containers
-	containers := make([]*v1.Container, 0, len(containerList))
-
-	for _, c := range containerList {
-		parts := strings.Split(c.Image, ":")
-		if parts[0] == image {
-			containers = append(containers, &c)
-		}
-	}
-
-	if len(containers) <= 0 {
-		return ErrNoMatchingContainer
-	}
-
-	if image == "" {
-		return ErrNoImage
-	}
+) {
+	containers := updateContainerImages(
+		image,
+		tag,
+		jobObj.Spec.JobTemplate.Spec.Template.Spec.Containers,
+	)
 
 	if jobObj.Spec.JobTemplate.Labels == nil {
 		jobObj.Spec.JobTemplate.Labels = make(map[string]string)
@@ -87,12 +77,7 @@ func (cj *cronjob) updateObject(
 	// Also make sure to update the cronJob's metadata to match the new tag.
 	jobObj.Labels["version"] = tag
 	jobObj.Spec.JobTemplate.Labels["version"] = tag
-
-	for _, c := range containers {
-		c.Image = fmt.Sprintf("%v:%v", image, tag)
-	}
-
-	return nil
+	jobObj.Spec.JobTemplate.Spec.Template.Spec.Containers = containers
 }
 
 func (cj *cronjob) updateCronJobObject(
