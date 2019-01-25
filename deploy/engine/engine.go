@@ -24,24 +24,25 @@ func NewEngine(shippers map[string]Shipper) *Engine {
 // Run performs a deployment based on the configured shippers and the provided
 // options. A failure in a single shipper will result in a rollback being
 // issued across all shippers as well.
-func (eng *Engine) Run(opts Options) (err error) {
+func (eng *Engine) Run(opts Options) error {
 	ctx := ContextForOptions(opts)
 
 	// Run the deploy and return if everything works.
-	if err = eng.runDeploy(ctx); err == nil {
+	finalErr := eng.runDeploy(ctx)
+	if finalErr == nil {
 		return nil
 	}
 
 	fmt.Println(strings.Repeat("*", 80))
 	fmt.Println("An error was encountered while deploying the application")
-	fmt.Printf("The error message was: %v\n", err)
+	fmt.Printf("The error message was: %v\n", finalErr)
 	fmt.Println(strings.Repeat("*", 80))
 
-	if err = eng.runRollback(ctx); err != nil {
+	if err := eng.runRollback(ctx); err != nil {
 		return nil
 	}
 
-	return
+	return finalErr
 }
 
 // runDeploy runs every shipper's ShipIt method with a shared context and
